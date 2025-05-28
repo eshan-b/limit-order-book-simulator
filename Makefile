@@ -1,7 +1,7 @@
 # Makefile for LOB Simulator
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2
-TARGET = lob_simulator
+TARGET = lob_simulator.exe
 SOURCES = main.cpp lob.cpp order_queue.cpp
 
 # Object files

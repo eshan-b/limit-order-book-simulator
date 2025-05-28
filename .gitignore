@@ -1,0 +1,25 @@
+# Compiled object files
+*.o
+
+# Executable files
+*.exe
+*.out
+*.app
+
+# Build directories
+/build/
+/bin/
+/obj/
+
+# CMake and Makefile artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# VSCode/CLion/project files
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
