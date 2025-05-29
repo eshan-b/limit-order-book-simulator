@@ -46,6 +46,17 @@ private:
                        int trade_quantity);
 
     /**
+     * @brief Processes matching at a single price level.
+     * @param order The order being matched.
+     * @param queue The order queue at the current price level.
+     * @param level_price The price of the current level.
+     * @param is_market_order Whether this is a market order.
+     * @return True to continue processing other levels, false to stop.
+     */
+    bool process_price_level(std::shared_ptr<Order> order, OrderQueue &queue,
+                             double level_price, bool is_market_order);
+
+    /**
      * @brief Matches a market order against available limit orders.
      * @param market_order The market order to be matched.
      */

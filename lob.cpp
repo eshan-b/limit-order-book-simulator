@@ -1,4 +1,3 @@
-// lob.cpp
 #include "lob.h"
 #include <chrono>
 #include <iostream>
@@ -25,83 +24,92 @@ void LimitOrderBook::execute_trade(std::shared_ptr<Order> aggressive_order,
               << std::fixed << std::setprecision(2) << passive_order->price << std::endl;
 }
 
+bool LimitOrderBook::process_price_level(std::shared_ptr<Order> order, OrderQueue &queue,
+                                         double level_price, bool is_market_order)
+{
+    // Check price compatibility for limit orders
+    if (!is_market_order)
+    {
+        if (order->side == OrderSide::BUY && order->price < level_price)
+            return false; // Buy limit can't match above limit price
+
+        if (order->side == OrderSide::SELL && order->price > level_price)
+            return false; // Sell limit can't match below limit price
+    }
+
+    // Process all orders at this price level while there's quantity remaining
+    while (order->quantity > 0 && !queue.empty())
+    {
+        auto passive_order = queue.front();
+        int trade_quantity = std::min(order->quantity, passive_order->quantity);
+
+        execute_trade(order, passive_order, trade_quantity);
+
+        // Update quantities
+        order->quantity -= trade_quantity;
+        passive_order->quantity -= trade_quantity;
+
+        // Handle passive order after trade
+        if (passive_order->quantity == 0)
+        {
+            order_locations.erase(passive_order->id);
+            queue.pop();
+        }
+        else
+            queue.update_quantity(passive_order->quantity);
+    }
+
+    return true; // Continue processing other price levels
+}
+
 void LimitOrderBook::match_market_order(std::shared_ptr<Order> market_order)
 {
     if (market_order->side == OrderSide::BUY)
     {
-        // Market buy - match against asks
-        while (market_order->quantity > 0 && !ask_levels.empty())
+        // Market buy - match against asks (ascending price order)
+        auto it = ask_levels.begin();
+        while (market_order->quantity > 0 && it != ask_levels.end())
         {
-            auto &[price, queue] = *ask_levels.begin();
+            auto &[price, queue] = *it;
 
             if (queue.empty())
             {
-                ask_levels.erase(ask_levels.begin());
+                it = ask_levels.erase(it);
                 continue;
             }
 
-            auto passive_order = queue.front();
-            int trade_quantity = std::min(market_order->quantity, passive_order->quantity);
-
-            execute_trade(market_order, passive_order, trade_quantity);
-
-            market_order->quantity -= trade_quantity;
-            passive_order->quantity -= trade_quantity;
-
-            if (passive_order->quantity == 0)
-            {
-                order_locations.erase(passive_order->id);
-                queue.pop();
-            }
-            else
-            {
-                queue.update_quantity(passive_order->quantity);
-            }
+            process_price_level(market_order, queue, price, true);
 
             if (queue.empty())
-            {
-                ask_levels.erase(ask_levels.begin());
-            }
+                it = ask_levels.erase(it);
+            else
+                ++it;
         }
     }
     else
     {
-        // Market sell - match against bids
-        while (market_order->quantity > 0 && !bid_levels.empty())
+        // Market sell - match against bids (descending price order)
+        auto it = bid_levels.begin();
+        while (market_order->quantity > 0 && it != bid_levels.end())
         {
-            auto &[price, queue] = *bid_levels.begin();
+            auto &[price, queue] = *it;
 
             if (queue.empty())
             {
-                bid_levels.erase(bid_levels.begin());
+                it = bid_levels.erase(it);
                 continue;
             }
 
-            auto passive_order = queue.front();
-            int trade_quantity = std::min(market_order->quantity, passive_order->quantity);
-
-            execute_trade(market_order, passive_order, trade_quantity);
-
-            market_order->quantity -= trade_quantity;
-            passive_order->quantity -= trade_quantity;
-
-            if (passive_order->quantity == 0)
-            {
-                order_locations.erase(passive_order->id);
-                queue.pop();
-            }
-            else
-            {
-                queue.update_quantity(passive_order->quantity);
-            }
+            process_price_level(market_order, queue, price, true);
 
             if (queue.empty())
-            {
-                bid_levels.erase(bid_levels.begin());
-            }
+                it = bid_levels.erase(it);
+            else
+                ++it;
         }
     }
 
+    // Handle unfilled market order
     if (market_order->quantity > 0)
     {
         std::cout << "WARNING: Market order partially filled. "
@@ -114,41 +122,24 @@ void LimitOrderBook::match_limit_order(std::shared_ptr<Order> limit_order)
     if (limit_order->side == OrderSide::BUY)
     {
         // Buy limit order - match against asks at or below limit price
-        while (limit_order->quantity > 0 && !ask_levels.empty())
+        auto it = ask_levels.begin();
+        while (limit_order->quantity > 0 && it != ask_levels.end())
         {
-            auto &[price, queue] = *ask_levels.begin();
-
-            if (price > limit_order->price)
-                break; // No more matching prices
+            auto &[price, queue] = *it;
 
             if (queue.empty())
             {
-                ask_levels.erase(ask_levels.begin());
+                it = ask_levels.erase(it);
                 continue;
             }
 
-            auto passive_order = queue.front();
-            int trade_quantity = std::min(limit_order->quantity, passive_order->quantity);
-
-            execute_trade(limit_order, passive_order, trade_quantity);
-
-            limit_order->quantity -= trade_quantity;
-            passive_order->quantity -= trade_quantity;
-
-            if (passive_order->quantity == 0)
-            {
-                order_locations.erase(passive_order->id);
-                queue.pop();
-            }
-            else
-            {
-                queue.update_quantity(passive_order->quantity);
-            }
+            if (!process_price_level(limit_order, queue, price, false))
+                break; // No more favorable prices
 
             if (queue.empty())
-            {
-                ask_levels.erase(ask_levels.begin());
-            }
+                it = ask_levels.erase(it);
+            else
+                ++it;
         }
 
         // Add remaining quantity to bid book
@@ -161,41 +152,24 @@ void LimitOrderBook::match_limit_order(std::shared_ptr<Order> limit_order)
     else
     {
         // Sell limit order - match against bids at or above limit price
-        while (limit_order->quantity > 0 && !bid_levels.empty())
+        auto it = bid_levels.begin();
+        while (limit_order->quantity > 0 && it != bid_levels.end())
         {
-            auto &[price, queue] = *bid_levels.begin();
-
-            if (price < limit_order->price)
-                break; // No more matching prices
+            auto &[price, queue] = *it;
 
             if (queue.empty())
             {
-                bid_levels.erase(bid_levels.begin());
+                it = bid_levels.erase(it);
                 continue;
             }
 
-            auto passive_order = queue.front();
-            int trade_quantity = std::min(limit_order->quantity, passive_order->quantity);
-
-            execute_trade(limit_order, passive_order, trade_quantity);
-
-            limit_order->quantity -= trade_quantity;
-            passive_order->quantity -= trade_quantity;
-
-            if (passive_order->quantity == 0)
-            {
-                order_locations.erase(passive_order->id);
-                queue.pop();
-            }
-            else
-            {
-                queue.update_quantity(passive_order->quantity);
-            }
+            if (!process_price_level(limit_order, queue, price, false))
+                break; // No more favorable prices
 
             if (queue.empty())
-            {
-                bid_levels.erase(bid_levels.begin());
-            }
+                it = bid_levels.erase(it);
+            else
+                ++it;
         }
 
         // Add remaining quantity to ask book
@@ -226,9 +200,7 @@ bool LimitOrderBook::cancel_order(int order_id)
 {
     auto it = order_locations.find(order_id);
     if (it == order_locations.end())
-    {
         return false;
-    }
 
     double price = it->second.first;
     OrderSide side = it->second.second;
@@ -241,9 +213,7 @@ bool LimitOrderBook::cancel_order(int order_id)
         {
             found = level_it->second.remove_order(order_id);
             if (level_it->second.empty())
-            {
                 bid_levels.erase(level_it);
-            }
         }
     }
     else
@@ -253,16 +223,12 @@ bool LimitOrderBook::cancel_order(int order_id)
         {
             found = level_it->second.remove_order(order_id);
             if (level_it->second.empty())
-            {
                 ask_levels.erase(level_it);
-            }
         }
     }
 
     if (found)
-    {
         order_locations.erase(it);
-    }
 
     return found;
 }
@@ -288,9 +254,7 @@ void LimitOrderBook::print_book() const
         }
     }
     else
-    {
         std::cout << "Best Ask: No asks available" << std::endl;
-    }
 
     // Best bid
     if (!bid_levels.empty())
@@ -303,9 +267,7 @@ void LimitOrderBook::print_book() const
         }
     }
     else
-    {
         std::cout << "Best Bid: No bids available" << std::endl;
-    }
 
     // Spread calculation
     if (!bid_levels.empty() && !ask_levels.empty())
