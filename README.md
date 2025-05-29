@@ -42,7 +42,7 @@ cd lob_simulator
 ./build.sh
 
 # Run the project
-./lob_simulator
+./lob_simulator.exe
 ```
 
 ## Usage
