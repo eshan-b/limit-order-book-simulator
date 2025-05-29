@@ -2,7 +2,7 @@
 
 A high-performance, educational limit order book simulator written in C++17. This project implements a realistic order matching engine that demonstrates how modern financial exchanges process buy and sell orders.
 
-*Note: This is a single-order LOB.*
+*Note: This is a single order level LOB.*
 
 ## Features
 
@@ -19,6 +19,8 @@ A high-performance, educational limit order book simulator written in C++17. Thi
 - **Live Book Display**: Real-time view of best bid/ask prices and market spread
 
 - **Data Replay**: Parse and replay historical order book data from LOBSTER (NASDAQ Historical TotalView-ITCH) files for simulation and analysis
+
+*Note: More replay data can be found here: [LOBSTER data](https://lobsterdata.com/info/DataSamples.php). Also consider that this app only supports a single order level LOB.*
 
 ## Prerequisites
 
