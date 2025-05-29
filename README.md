@@ -79,7 +79,7 @@ help                # Show command help
 exit                # Exit simulator
 ```
 
-### Example Session
+### Example Interactive Session
 
 ```bash
 lob> limit buy 100 10
@@ -111,6 +111,53 @@ Order 1 cancelled successfully
 Best Ask: $101.00 (2 shares)
 Best Bid: No bids available
 ==================
+```
+
+### Example Replay Session
+
+```bash
+lob> load AAPL_message_1.csv
+Loaded 118497 messages from AAPL_message_1.csv
+
+=== LOBSTER DATA STATISTICS ===
+Total Messages: 118497
+Time Range: 34200.004s - 57599.913s (23399.909s duration)
+Price Range: $577.45 - $588.22
+
+Message Types:
+  New Orders: 54818
+  Cancellations: 252
+  Deletions: 28437
+  Visible Executions: 23658
+  Hidden Executions: 11332
+  Trading Halts: 0
+
+Order Directions:
+  Buy Orders: 57004
+  Sell Orders: 61493
+===============================
+LOBSTER data loaded successfully!
+
+lob> replay all verbose step
+
+Starting LOBSTER data replay...
+Total messages to process: 118497
+Step-by-step mode: Press Enter after each message...
+[34200.004241s] NEW_ORDER - ID:16113575 Size:18 Price:$585.33 Side:BUY
+
+=== ORDER BOOK ===
+Best Ask: No asks available
+Best Bid: $585.33 (18 shares)
+==================
+Press Enter to continue...
+[34200.025552s] NEW_ORDER - ID:16120456 Size:18 Price:$585.91 Side:SELL
+
+=== ORDER BOOK ===
+Best Ask: $585.91 (18 shares)
+Best Bid: $585.33 (18 shares)
+Spread: $0.58
+==================
+Press Enter to continue...
 ```
 
 ## How It Works
