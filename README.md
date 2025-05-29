@@ -39,7 +39,7 @@ A high-performance, educational limit order book simulator written in C++17. Thi
 cd lob_simulator
 
 # Build and run the project
-./build.bash
+./build.sh
 
 # Run the project
 ./lob_simulator
