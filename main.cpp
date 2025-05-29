@@ -1,5 +1,6 @@
 // main.cpp
 #include "lob.h"
+#include "lobster_replay.h"
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -9,6 +10,7 @@ class LOBSimulator
 {
 private:
     LimitOrderBook lob;
+    LobsterReplayEngine replay_engine;
 
     std::vector<std::string> split(const std::string &str, char delimiter)
     {
@@ -30,12 +32,20 @@ private:
     void print_help()
     {
         std::cout << "\n=== LOB SIMULATOR COMMANDS ===" << std::endl;
+        std::cout << "=== Manual Trading ===" << std::endl;
         std::cout << "limit buy <price> <quantity>   - Add buy limit order" << std::endl;
         std::cout << "limit sell <price> <quantity>  - Add sell limit order" << std::endl;
         std::cout << "market buy <quantity>          - Execute market buy order" << std::endl;
         std::cout << "market sell <quantity>         - Execute market sell order" << std::endl;
         std::cout << "cancel <order_id>              - Cancel order by ID" << std::endl;
         std::cout << "print                          - Display current book state" << std::endl;
+        std::cout << "\n=== LOBSTER Data Replay ===" << std::endl;
+        std::cout << "load <filename>                - Load LOBSTER CSV file" << std::endl;
+        std::cout << "replay all [verbose] [step]    - Replay all messages" << std::endl;
+        std::cout << "replay <n> [verbose]           - Replay next n messages" << std::endl;
+        std::cout << "reset                          - Reset replay to beginning" << std::endl;
+        std::cout << "stats                          - Show replay statistics" << std::endl;
+        std::cout << "\n=== General ===" << std::endl;
         std::cout << "help                           - Show this help message" << std::endl;
         std::cout << "exit                           - Exit simulator" << std::endl;
         std::cout << "===============================" << std::endl;
@@ -45,6 +55,7 @@ public:
     void run()
     {
         std::cout << "Welcome to the Limit Order Book Simulator!" << std::endl;
+        std::cout << "Now with LOBSTER data replay support!" << std::endl;
         std::cout << "Type 'help' for available commands." << std::endl;
 
         std::string input;
@@ -76,6 +87,76 @@ public:
                 else if (command == "print")
                 {
                     lob.print_book();
+                }
+                else if (command == "load")
+                {
+                    if (tokens.size() != 2)
+                    {
+                        std::cout << "Usage: load <filename>" << std::endl;
+                        continue;
+                    }
+
+                    std::string filename = tokens[1];
+                    if (replay_engine.load_data(filename))
+                    {
+                        std::cout << "LOBSTER data loaded successfully!" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Failed to load LOBSTER data from " << filename << std::endl;
+                    }
+                }
+                else if (command == "replay")
+                {
+                    if (tokens.size() < 2)
+                    {
+                        std::cout << "Usage: replay <all|n> [verbose] [step]" << std::endl;
+                        continue;
+                    }
+
+                    std::string mode = tokens[1];
+                    bool verbose = false;
+                    bool step_by_step = false;
+
+                    // Check for verbose and step flags
+                    for (size_t i = 2; i < tokens.size(); i++)
+                    {
+                        if (tokens[i] == "verbose")
+                            verbose = true;
+                        if (tokens[i] == "step")
+                            step_by_step = true;
+                    }
+
+                    if (mode == "all")
+                    {
+                        replay_engine.replay_all(verbose, step_by_step);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            int n = std::stoi(mode);
+                            if (n <= 0)
+                            {
+                                std::cout << "Error: Number of messages must be positive" << std::endl;
+                                continue;
+                            }
+                            replay_engine.replay_n_messages(n, verbose);
+                        }
+                        catch (const std::exception &e)
+                        {
+                            std::cout << "Error: Invalid number of messages" << std::endl;
+                        }
+                    }
+                }
+                else if (command == "reset")
+                {
+                    replay_engine.reset();
+                    std::cout << "Replay engine reset to beginning" << std::endl;
+                }
+                else if (command == "stats")
+                {
+                    replay_engine.print_statistics();
                 }
                 else if (command == "limit")
                 {

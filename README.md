@@ -18,6 +18,8 @@ A high-performance, educational limit order book simulator written in C++17. Thi
 
 - **Live Book Display**: Real-time view of best bid/ask prices and market spread
 
+- **Data Replay**: Parse and replay historical order book data from LOBSTER (NASDAQ Historical TotalView-ITCH) files for simulation and analysis
+
 ## Prerequisites
 
 - **C++ Compiler**: GCC 7+ or Clang 5+ with C++17 support
@@ -45,7 +47,7 @@ cd lob_simulator
 
 ### Interactive Commands
 
-Once the simulator is running, you can use these commands:
+Here are some of the interactive examples:
 
 #### Limit Orders
 ```bash
@@ -154,6 +156,10 @@ Best Bid: No bids available
 - **Order Cancellation**: $O(m)$ where $m$ is orders at a price level
 
 - **Market Order Execution**: $O(k\log(n))$ where $k$ is orders consumed
+
+- **CSV Parsing**: $O(e)$ where $e$ is the number of events in the file
+
+- **Replay Processing**: $O(e\log(n))$ for processing $e$ events with $n$ price levels
 
 ## License
 
