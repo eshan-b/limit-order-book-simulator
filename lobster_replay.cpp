@@ -1,4 +1,3 @@
-// lobster_replay.cpp
 #include "lobster_replay.h"
 #include <iostream>
 #include <iomanip>
