@@ -1,4 +1,3 @@
-# Makefile for LOB Simulator
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 TARGET = lob_simulator.exe
