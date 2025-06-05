@@ -1,4 +1,3 @@
-// lobster_parser.cpp
 #include "lobster_parser.h"
 #include <fstream>
 #include <sstream>
